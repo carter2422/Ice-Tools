@@ -133,6 +133,7 @@ class SetUpRetopoMesh(bpy.types.Operator):
         bpy.context.scene.tool_settings.use_snap = True
         bpy.context.scene.tool_settings.snap_element = 'FACE'
         bpy.context.scene.tool_settings.snap_target = 'CLOSEST'
+        bpy.context.scene.tool_settings.use_snap_project = True
         bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='VERT')
 
         #establish link for shrinkwrap update function
