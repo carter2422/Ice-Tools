@@ -54,7 +54,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.select_mirror()
         bpy.ops.mesh.select_mode(type='EDGE')
-        bpy.ops.mesh.loop_multi_select()
+        bpy.ops.mesh.loop_multi_select(ring=False)
         bpy.ops.mesh.symmetry_snap(threshold=wm.clipx_threshold, use_center=True)
 
     bpy.ops.mesh.select_all(action='DESELECT')
@@ -66,30 +66,32 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.ops.object.vertex_group_select()
         bpy.ops.object.vertex_group_remove(all=False)          
     
-    bpy.ops.object.mode_set(mode='OBJECT')  
-
-    if bpy.context.active_object.modifiers.find("shrinkwrap_apply") == 0:
-        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
+    bpy.ops.object.mode_set(mode='OBJECT')
     
+    if bpy.context.active_object.modifiers.find("shrinkwrap_apply") != -1:
+        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
+
+    #count number of active mod
+    md_ladder = bpy.context.active_object.modifiers.items()
+
     md = activeObj.modifiers.new('shrinkwrap_apply', 'SHRINKWRAP')
     md.target = bpy.data.objects[meshlink]
     md.wrap_method = wrap_meth
-        
     if md.wrap_method == "PROJECT":
         md.use_negative_direction = True
     if md.wrap_method == "NEAREST_SURFACEPOINT":
         md.use_keep_above_surface = True
-    
     md.offset = wrap_offset
-    
     if wm.sw_use_onlythawed == True:                          
         md.vertex_group = "retopo_suppo_thawed"
-     
-    #move modifier to first of stack
-    for md in activeObj.modifiers:
-        bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")
-            
-    # apply the modifier
+    md.show_on_cage = True        
+
+    #move the sw mod up the stack
+    for x in md_ladder:
+        if wm.sw_autoapply == True:
+            bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")
+    
+    #apply the modifier
     if wm.sw_autoapply == True:
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="shrinkwrap_apply")
         
@@ -474,7 +476,7 @@ def register():
     bpy.types.WindowManager.expand_sw_options = BoolProperty(default=False) 
     
     bpy.types.WindowManager.clipx_threshold = FloatProperty(min = 0.0001, max = 1, default = 0.5)
-   
+  
 def unregister():
     bpy.utils.unregister_module(__name__)
     
