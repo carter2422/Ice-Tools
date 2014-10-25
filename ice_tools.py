@@ -12,6 +12,7 @@ bl_info = {
 
 import bpy
 import math
+import bmesh
 from bpy.props import *
 
 def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
@@ -51,11 +52,20 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     #clipcenter
     if clipcenter == "True":
         bpy.ops.mesh.select_mode(type='VERT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.select_mirror()
-        bpy.ops.mesh.select_mode(type='EDGE')
-        bpy.ops.mesh.loop_multi_select(ring=False)
-        bpy.ops.mesh.symmetry_snap(threshold=wm.clipx_threshold, use_center=True)
+        bpy.ops.mesh.select_all(action='DESELECT')
+        
+        obj = bpy.context.active_object
+        bm = bmesh.from_edit_mesh(obj.data)
+        
+        for v in bm.verts:
+            if wm.clipx_threshold <= 0:
+                if v.co.x >= wm.clipx_threshold:
+                    v.select = True
+            elif wm.clipx_threshold >= 0:
+                if v.co.x <= wm.clipx_threshold:
+                    v.select = True                    
+        
+        bpy.ops.mesh.symmetry_snap(threshold=0.5, factor=0.5, use_center=True)
 
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.mesh.select_mode(type=oldSel)
@@ -71,9 +81,6 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     if bpy.context.active_object.modifiers.find("shrinkwrap_apply") != -1:
         bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
 
-    #count number of active mod
-    md_ladder = bpy.context.active_object.modifiers.items()
-
     md = activeObj.modifiers.new('shrinkwrap_apply', 'SHRINKWRAP')
     md.target = bpy.data.objects[meshlink]
     md.wrap_method = wrap_meth
@@ -87,9 +94,8 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     md.show_on_cage = True        
 
     #move the sw mod up the stack
-    for x in md_ladder:
-        if wm.sw_autoapply == True:
-            bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")
+    while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 0:
+        bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")    
     
     #apply the modifier
     if wm.sw_autoapply == True:
@@ -117,12 +123,12 @@ class SetUpRetopoMesh(bpy.types.Operator):
         bpy.ops.mesh.delete(type='VERT')
         bpy.ops.object.editmode_toggle()
         bpy.context.object.name = oldObj + "_retopo_mesh"    
-        
         activeObj = context.active_object
-        if wm.reto_use_mirror == True:
-            md = activeObj.modifiers.new("Mirror", 'MIRROR')
-            md.show_on_cage = True
-            md.use_clip = True
+
+        #place mirror mod
+        md = activeObj.modifiers.new("Mirror", 'MIRROR')
+        md.show_on_cage = True
+        md.use_clip = True
         
         #generate grease pencil surface draw mode on retopo mesh
         bpy.ops.gpencil.data_add()
@@ -156,6 +162,7 @@ class ShrinkUpdate(bpy.types.Operator):
     
     use_only_thawed = bpy.props.BoolProperty(name = "Preserve Frozen", default = False)    
     apply_mod = bpy.props.BoolProperty(name = "Auto-apply Shrinkwrap", default = True)
+    sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05) 
     sw_offset = bpy.props.FloatProperty(name = "Offset:", min = -0.1, max = 0.1, default = 0)
     sw_wrapmethod = bpy.props.EnumProperty(
         name = 'Wrap Method',
@@ -164,6 +171,8 @@ class ShrinkUpdate(bpy.types.Operator):
             ('PROJECT', 'Project',""),
             ('NEAREST_SURFACEPOINT', 'Nearest Surface Point',"")),
         default = 'PROJECT')
+    sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05)        
+        
     
     @classmethod
     def poll(cls, context):
@@ -173,6 +182,8 @@ class ShrinkUpdate(bpy.types.Operator):
         activeObj = context.active_object
         wm = context.window_manager        
         oldMode = activeObj.mode
+        
+        wm.clipx_threshold = self.sw_clipx
         
         if self.use_only_thawed == True:
             wm.sw_use_onlythawed = True            
@@ -406,30 +417,13 @@ class RetopoSupport(bpy.types.Panel):
 
         wm = context.window_manager
         
-        #reto mesh
-        col = layout.column(align=True)        
-        split = col.split(percentage=0.15)
-        if wm.retmesh_func==True:
-            split.prop(wm, "retmesh_func", text="", icon='DOWNARROW_HLT')
-        else:
-            split.prop(wm, "retmesh_func", text="", icon='RIGHTARROW')
-        split.operator("setup.retopo", text="Set Up Retopo Mesh") 
-        if wm.retmesh_func==True:
-            box = col.column(align=True).box().column() 
-            box.prop(wm, "reto_use_mirror", "Use Mirror")                
-
-        #s_w update
-        col1 = layout.column(align=True)        
-        split1 = col1.split(percentage=0.15)
-        if wm.shrinkupd_func==True:
-            split1.prop(wm, "shrinkupd_func", text="", icon='DOWNARROW_HLT')
-        else:
-            split1.prop(wm, "shrinkupd_func", text="", icon='RIGHTARROW')
-        split1.operator("shrink.update", text="Shrinkwrap Update")
-        if wm.shrinkupd_func==True:
-            box = col1.column(align=True).box().column()                                
-            box.prop(wm, "clipx_threshold", text="X Symmetry Threshold")     
-
+        row1 = layout.row(align=True)
+        row1.alignment = 'EXPAND'
+        row1.operator("setup.retopo", text="Set Up Retopo Mesh")
+        row2 = layout.row(align=True)
+        row2.alignment = 'EXPAND'
+        row2.operator("shrink.update", text="Shrinkwrap Update")          
+        
         layout.separator()
         box = layout.box().column(align=True)
         if wm.expand_sw_freeze_verts == False: 
@@ -462,20 +456,14 @@ def register():
     
     bpy.types.WindowManager.sw_mesh= StringProperty()
     bpy.types.WindowManager.sw_target= StringProperty()
-    bpy.types.WindowManager.sw_lockval = BoolProperty(default=False)
-    
-    bpy.types.WindowManager.retmesh_func = BoolProperty(default=False)
-    bpy.types.WindowManager.shrinkupd_func = BoolProperty(default=False) 
-    bpy.types.WindowManager.smoothmesh_func = BoolProperty(default=False)
     
     bpy.types.WindowManager.sw_use_onlythawed = BoolProperty(default=False)      
     bpy.types.WindowManager.sw_autoapply = BoolProperty(default=True)          
-    bpy.types.WindowManager.reto_use_mirror = BoolProperty(default=True)
-
+    
     bpy.types.WindowManager.expand_sw_freeze_verts = BoolProperty(default=False) 
     bpy.types.WindowManager.expand_sw_options = BoolProperty(default=False) 
     
-    bpy.types.WindowManager.clipx_threshold = FloatProperty(min = 0.0001, max = 1, default = 0.5)
+    bpy.types.WindowManager.clipx_threshold = FloatProperty(min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05)
   
 def unregister():
     bpy.utils.unregister_module(__name__)
