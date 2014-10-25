@@ -168,7 +168,7 @@ class ShrinkUpdate(bpy.types.Operator):
             ('PROJECT', 'Project',""),
             ('NEAREST_SURFACEPOINT', 'Nearest Surface Point',"")),
         default = 'PROJECT')
-    sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05)        
+    sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.1, max = 0.1, step = 0.1, precision = 3, default = -0.05)        
         
     
     @classmethod
@@ -460,7 +460,7 @@ def register():
     bpy.types.WindowManager.expand_sw_freeze_verts = BoolProperty(default=False) 
     bpy.types.WindowManager.expand_sw_options = BoolProperty(default=False) 
     
-    bpy.types.WindowManager.clipx_threshold = FloatProperty(min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05)
+    bpy.types.WindowManager.clipx_threshold = FloatProperty(min = -0.1, max = 0.1, step = 0.1, precision = 3, default = -0.05)
   
 def unregister():
     bpy.utils.unregister_module(__name__)
