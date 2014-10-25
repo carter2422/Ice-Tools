@@ -49,35 +49,6 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.ops.object.vertex_group_assign()
         bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
 
-    #clipcenter
-    if clipcenter == "True":
-        bpy.ops.mesh.select_mode(type='VERT')
-        bpy.ops.mesh.select_all(action='DESELECT')
-        
-        obj = bpy.context.active_object
-        bm = bmesh.from_edit_mesh(obj.data)
-        
-        for v in bm.verts:
-            if wm.clipx_threshold <= 0:
-                if v.co.x >= wm.clipx_threshold:
-                    v.select = True
-            elif wm.clipx_threshold >= 0:
-                if v.co.x <= wm.clipx_threshold:
-                    v.select = True                    
-        
-        bpy.ops.mesh.symmetry_snap(threshold=0.5, factor=0.5, use_center=True)
-
-    bpy.ops.mesh.select_all(action='DESELECT')
-    bpy.ops.mesh.select_mode(type=oldSel)
-    
-    if bpy.context.active_object.vertex_groups.find("retopo_suppo_vgroup") != -1:
-        vg = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_vgroup"].index
-        activeObj.vertex_groups.active_index = vg            
-        bpy.ops.object.vertex_group_select()
-        bpy.ops.object.vertex_group_remove(all=False)          
-    
-    bpy.ops.object.mode_set(mode='OBJECT')
-    
     if bpy.context.active_object.modifiers.find("shrinkwrap_apply") != -1:
         bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
 
@@ -93,16 +64,42 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         md.vertex_group = "retopo_suppo_thawed"
     md.show_on_cage = True        
 
-    #move the sw mod up the stack
-    while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 0:
-        bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")    
-    
-    #apply the modifier
     if wm.sw_autoapply == True:
+    #move the sw mod up the stack
+        while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 0:
+            bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")    
+    #apply the modifier
+        bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="shrinkwrap_apply")
+        bpy.ops.object.mode_set(mode='EDIT')        
+    
+    #clipcenter
+    if clipcenter == "True":
+        bpy.ops.mesh.select_mode(type='VERT')
+        bpy.ops.mesh.select_all(action='DESELECT')
         
-    bpy.ops.object.mode_set(mode=oldMode)
+        obj = bpy.context.active_object
+        bm = bmesh.from_edit_mesh(obj.data)
+        
+        for v in bm.verts:
+            if wm.clipx_threshold <= 0:
+                if v.co.x >= wm.clipx_threshold:
+                    v.co.x = 0
+            elif wm.clipx_threshold >= 0:
+                if v.co.x <= wm.clipx_threshold:
+                    v.co.x = 0
 
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.mesh.select_mode(type=oldSel)
+    
+    if bpy.context.active_object.vertex_groups.find("retopo_suppo_vgroup") != -1:
+        vg = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_vgroup"].index
+        activeObj.vertex_groups.active_index = vg            
+        bpy.ops.object.vertex_group_select()
+        bpy.ops.object.vertex_group_remove(all=False)           
+    
+    bpy.ops.object.mode_set(mode=oldMode)
+    
 class SetUpRetopoMesh(bpy.types.Operator):
     '''Set up Retopology Mesh on Active Object'''
     bl_idname = "setup.retopo"
