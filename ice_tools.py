@@ -398,7 +398,68 @@ class GpencilSpacing(bpy.types.Operator):
         edit.use_grease_pencil_smooth_stroke = self.gpencil_smooth
         edit.use_grease_pencil_simplify_stroke = self.gpencil_simp_stroke        
                            
-        return {'FINISHED'}                       
+        return {'FINISHED'}
+
+class IceMesh(bpy.types.Operator):
+    '''Reduced polycount mesh toggle'''
+    bl_idname = "icemesh.retopo"
+    bl_label = "Ice Mesh"
+    bl_options = {'REGISTER', 'UNDO'}    
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.mode == 'OBJECT'
+
+    def execute(self, context):
+        ob = context.active_object
+        wm = context.window_manager        
+        scene = context.scene
+        
+        oldname = ob.name
+        target_ice = "iced_" + oldname
+        if ob.data.name == target_ice:
+            ob.data = bpy.data.meshes['thawed_' + oldname]
+            return {'FINISHED'}    
+        if not target_ice in bpy.data.meshes:
+            if ob.data.name != "thawed_" + oldname:
+                ob.data.name = "thawed_" + oldname
+
+            ob.data.use_fake_user = True
+            md = ob.modifiers.new('IceDecimate', 'DECIMATE')
+            md.show_viewport = False
+            md.ratio = 0.25
+            
+            icedmesh = ob.to_mesh(scene, True, "RENDER")
+            icedmesh.name = target_ice
+            bpy.ops.object.modifier_remove(modifier= "IceDecimate")
+            ob.data = icedmesh
+            ob.data.use_fake_user = True
+        else:
+            ob.data = bpy.data.meshes[target_ice]                
+        return {'FINISHED'}
+    
+class RemoveIceMesh(bpy.types.Operator):
+    '''Remove frozen meshes data links'''
+    bl_idname = "rem_icemesh.retopo"
+    bl_label = "Ice Mesh"
+    bl_options = {'REGISTER', 'UNDO'}    
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.mode == 'OBJECT'
+
+    def execute(self, context):
+        ob = context.active_object
+        wm = context.window_manager        
+        scene = context.scene
+        
+        oldname = ob.name
+        if ob.data.name == "iced_" + oldname or ob.data.name == "thawed_" + oldname :
+            ob.data = bpy.data.meshes['thawed_' + oldname]
+            bpy.data.meshes['iced_' + oldname].use_fake_user = False
+            bpy.data.meshes['thawed_' + oldname].use_fake_user = False
+            bpy.data.meshes.remove(bpy.data.meshes['iced_' + oldname])
+        return {'FINISHED'}                                 
             
 class RetopoSupport(bpy.types.Panel):
     """Retopology Support Functions"""
@@ -423,6 +484,17 @@ class RetopoSupport(bpy.types.Panel):
         
         layout.separator()
         box = layout.box().column(align=True)
+        if wm.expand_sw_freeze_mesh == False: 
+            box.prop(wm, "expand_sw_freeze_mesh", icon="TRIA_RIGHT", icon_only=True, text="Frozen Mesh", emboss=True)
+        else:
+            box.prop(wm, "expand_sw_freeze_mesh", icon="TRIA_DOWN", icon_only=True, text="Frozen Mesh", emboss=True)
+            box.separator()
+            boxrow = box.row(align=True)
+            boxrow.operator("icemesh.retopo", text="Ice Mesh")
+            boxrow = box.row(align=True)
+            boxrow.operator("rem_icemesh.retopo", text="Remove Ice Property")                
+            
+        box = layout.box().column(align=True)                      
         if wm.expand_sw_freeze_verts == False: 
             box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_RIGHT", icon_only=True, text="Frozen Verts", emboss=True)
         else:
@@ -443,10 +515,12 @@ class RetopoSupport(bpy.types.Panel):
             box1.separator()
             boxrow = box1.row(align=True)
             boxrow.operator("polysculpt.retopo", text="PolySculpt")
-            boxrow1 = box1.row(align=True)
-            boxrow1.operator("meshview_toggle.retopo", text="Mesh View Toggle")
             boxrow2 = box1.row(align=True)
-            boxrow2.operator("gpencil_spacing.retopo", text="Set Gpencil Spacing")                 
+            boxrow2.operator("icemesh.retopo", text="Ice Mesh")            
+            boxrow3 = box1.row(align=True)
+            boxrow3.operator("meshview_toggle.retopo", text="Mesh View Toggle")
+            boxrow4 = box1.row(align=True)
+            boxrow4.operator("gpencil_spacing.retopo", text="Set Gpencil Spacing")                 
 
 def register():
     bpy.utils.register_module(__name__)
@@ -457,6 +531,7 @@ def register():
     bpy.types.WindowManager.sw_use_onlythawed = BoolProperty(default=False)      
     bpy.types.WindowManager.sw_autoapply = BoolProperty(default=True)          
     
+    bpy.types.WindowManager.expand_sw_freeze_mesh = BoolProperty(default=False) 
     bpy.types.WindowManager.expand_sw_freeze_verts = BoolProperty(default=False) 
     bpy.types.WindowManager.expand_sw_options = BoolProperty(default=False) 
     
