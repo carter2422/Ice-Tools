@@ -521,11 +521,11 @@ class RetopoSupport(bpy.types.Panel):
         else:
             box.prop(wm, "expand_sw_options", icon="TRIA_DOWN", icon_only=True, text="Options", emboss=True)
             box.separator()
-            boxrow = box1.row(align=True)
+            boxrow = box.row(align=True)
             boxrow.operator("polysculpt.retopo", text="PolySculpt")
-            boxrow = box1.row(align=True)
+            boxrow = box.row(align=True)
             boxrow.operator("meshview_toggle.retopo", text="Mesh View Toggle")
-            boxrow = box1.row(align=True)
+            boxrow = box.row(align=True)
             boxrow.operator("gpencil_spacing.retopo", text="Set Gpencil Spacing")                 
 
 def register():
