@@ -454,11 +454,14 @@ class RemoveIceMesh(bpy.types.Operator):
         scene = context.scene
         
         oldname = ob.name
-        if ob.data.name == "iced_" + oldname or ob.data.name == "thawed_" + oldname :
-            ob.data = bpy.data.meshes['thawed_' + oldname]
-            bpy.data.meshes['iced_' + oldname].use_fake_user = False
-            bpy.data.meshes['thawed_' + oldname].use_fake_user = False
-            bpy.data.meshes.remove(bpy.data.meshes['iced_' + oldname])
+        target_ice = "iced_" + oldname
+        if target_ice in bpy.data.meshes:        
+            if ob.data.name == "iced_" + oldname or ob.data.name == "thawed_" + oldname :
+                ob.data = bpy.data.meshes['thawed_' + oldname]
+                bpy.data.meshes['iced_' + oldname].use_fake_user = False
+                bpy.data.meshes['thawed_' + oldname].use_fake_user = False
+                bpy.data.meshes.remove(bpy.data.meshes['iced_' + oldname])
+                
         return {'FINISHED'}                                 
             
 class RetopoSupport(bpy.types.Panel):
@@ -472,6 +475,7 @@ class RetopoSupport(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         edit = context.user_preferences.edit
+        mesh = context.object.data
 
         wm = context.window_manager
         
@@ -489,6 +493,10 @@ class RetopoSupport(bpy.types.Panel):
         else:
             box.prop(wm, "expand_sw_freeze_mesh", icon="TRIA_DOWN", icon_only=True, text="Frozen Mesh", emboss=True)
             box.separator()
+            boxrow = box.row(align=True)            
+            boxrow.label("Disable fake user for sculpt", icon = "ERROR")
+            boxrow = box.row(align=True)
+            boxrow.prop(mesh, "use_fake_user")
             boxrow = box.row(align=True)
             boxrow.operator("icemesh.retopo", text="Ice Mesh")
             boxrow = box.row(align=True)
@@ -502,25 +510,23 @@ class RetopoSupport(bpy.types.Panel):
             box.separator()
             boxrow = box.row(align=True)
             boxrow.operator("freeze_verts.retopo", text="Freeze Verts")
-            boxrow1 = box.row(align=True)
-            boxrow1.operator("thaw_freeze_verts.retopo", text="Thaw Frozen Verts")
-            boxrow2 = box.row(align=True)
-            boxrow2.operator("show_freeze_verts.retopo", text="Show Frozen Verts")                        
+            boxrow = box.row(align=True)
+            boxrow.operator("thaw_freeze_verts.retopo", text="Thaw Frozen Verts")
+            boxrow = box.row(align=True)
+            boxrow.operator("show_freeze_verts.retopo", text="Show Frozen Verts")                        
 
-        box1 = layout.box().column(align=True)
+        box = layout.box().column(align=True)
         if wm.expand_sw_options == False: 
-            box1.prop(wm, "expand_sw_options", icon="TRIA_RIGHT", icon_only=True, text="Options", emboss=True)
+            box.prop(wm, "expand_sw_options", icon="TRIA_RIGHT", icon_only=True, text="Options", emboss=True)
         else:
-            box1.prop(wm, "expand_sw_options", icon="TRIA_DOWN", icon_only=True, text="Options", emboss=True)
-            box1.separator()
+            box.prop(wm, "expand_sw_options", icon="TRIA_DOWN", icon_only=True, text="Options", emboss=True)
+            box.separator()
             boxrow = box1.row(align=True)
             boxrow.operator("polysculpt.retopo", text="PolySculpt")
-            boxrow2 = box1.row(align=True)
-            boxrow2.operator("icemesh.retopo", text="Ice Mesh")            
-            boxrow3 = box1.row(align=True)
-            boxrow3.operator("meshview_toggle.retopo", text="Mesh View Toggle")
-            boxrow4 = box1.row(align=True)
-            boxrow4.operator("gpencil_spacing.retopo", text="Set Gpencil Spacing")                 
+            boxrow = box1.row(align=True)
+            boxrow.operator("meshview_toggle.retopo", text="Mesh View Toggle")
+            boxrow = box1.row(align=True)
+            boxrow.operator("gpencil_spacing.retopo", text="Set Gpencil Spacing")                 
 
 def register():
     bpy.utils.register_module(__name__)
