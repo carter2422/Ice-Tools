@@ -475,7 +475,14 @@ class RetopoSupport(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         edit = context.user_preferences.edit
-        mesh = context.object.data
+        
+        icenam = "iced_" + context.active_object.name
+        if not icenam in bpy.data.meshes:
+            ice_stat = "Object is not frozen"
+            ice_com = "Ice Mesh"        
+        else:
+            ice_stat = "Object is frozen"
+            ice_com = "Toggle Ice Mesh"   
 
         wm = context.window_manager
         
@@ -494,11 +501,9 @@ class RetopoSupport(bpy.types.Panel):
             box.prop(wm, "expand_sw_freeze_mesh", icon="TRIA_DOWN", icon_only=True, text="Frozen Mesh", emboss=True)
             box.separator()
             boxrow = box.row(align=True)            
-            boxrow.label("Disable fake user for sculpt", icon = "ERROR")
+            boxrow.label(ice_stat, icon = "ERROR")
             boxrow = box.row(align=True)
-            boxrow.prop(mesh, "use_fake_user")
-            boxrow = box.row(align=True)
-            boxrow.operator("icemesh.retopo", text="Ice Mesh")
+            boxrow.operator("icemesh.retopo", text= ice_com)
             boxrow = box.row(align=True)
             boxrow.operator("rem_icemesh.retopo", text="Remove Ice Property")                
             
