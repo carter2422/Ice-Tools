@@ -72,8 +72,12 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     #apply the modifier
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="shrinkwrap_apply")
-        bpy.ops.object.mode_set(mode='EDIT')        
-    
+        bpy.ops.object.mode_set(mode='EDIT')
+    else:
+    #move the sw mod below the mirror mod assuming this is your first mod        
+        while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 1:
+            bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")         
+
     #clipcenter
     if clipcenter == "True":
         bpy.ops.mesh.select_mode(type='VERT')
