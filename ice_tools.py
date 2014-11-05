@@ -30,9 +30,10 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     
     bpy.context.scene.objects.active = activeObj
     bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_mode(type='VERT')    
     
     if wm.sw_use_onlythawed == True:
-        if bpy.context.active_object.vertex_groups.find("retopo_suppo_frozen") != -1:
+        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
             bpy.ops.mesh.select_all(action='DESELECT')
@@ -40,7 +41,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         
         bpy.ops.mesh.select_all(action='INVERT')
 
-        if bpy.context.active_object.vertex_groups.find("retopo_suppo_thawed") != -1:
+        if "retopo_suppo_thawed" in bpy.context.active_object.vertex_groups:
             tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_thawed"].index
             activeObj.vertex_groups.active_index = tv
             bpy.ops.object.vertex_group_remove(all=False)            
@@ -49,7 +50,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.ops.object.vertex_group_assign()
         bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
 
-    if bpy.context.active_object.modifiers.find("shrinkwrap_apply") != -1:
+    if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
         bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
 
     md = activeObj.modifiers.new('shrinkwrap_apply', 'SHRINKWRAP')
@@ -92,7 +93,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.mesh.select_mode(type=oldSel)
     
-    if bpy.context.active_object.vertex_groups.find("retopo_suppo_vgroup") != -1:
+    if "retopo_suppo_vgroup" in bpy.context.active_object.vertex_groups:
         vg = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_vgroup"].index
         activeObj.vertex_groups.active_index = vg            
         bpy.ops.object.vertex_group_select()
@@ -183,10 +184,10 @@ class ShrinkUpdate(bpy.types.Operator):
         wm.clipx_threshold = self.sw_clipx
         
         if self.use_only_thawed == True:
-            wm.sw_use_onlythawed = True            
+            wm.sw_use_onlythawed = True
         
         if activeObj.mode == 'EDIT':
-            if bpy.context.active_object.vertex_groups.find("retopo_suppo_vgroup") != -1:
+            if "retopo_suppo_vgroup" in bpy.context.active_object.vertex_groups:
                 fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_vgroup"].index
                 activeObj.vertex_groups.active_index = fv
                 bpy.ops.object.vertex_group_remove(all=False)            
@@ -212,7 +213,7 @@ class ShrinkUpdate(bpy.types.Operator):
                 else:
                     wm.sw_mesh = activeObj.name
             if wm.sw_mesh != None and wm.sw_target != None:
-                if bpy.data.objects[activeObj.name].modifiers.find('Mirror') == -1:             
+                if not "Mirror" in bpy.data.objects[activeObj.name].modifiers:             
                     sw_Update(wm.sw_target, "False", self.sw_offset, self.sw_wrapmethod)
                 else:
                     sw_Update(wm.sw_target, "True", self.sw_offset, self.sw_wrapmethod)
@@ -224,7 +225,7 @@ class ShrinkUpdate(bpy.types.Operator):
                 self.report({'WARNING'}, "Not Active Link Mesh!")
                 return {'FINISHED'}
             else:
-                if bpy.data.objects[activeObj.name].modifiers.find('Mirror') == -1:             
+                if not "Mirror" in bpy.data.objects[activeObj.name].modifiers:             
                     sw_Update(wm.sw_target, "False", self.sw_offset, self.sw_wrapmethod)
                 else:
                     sw_Update(wm.sw_target, "True", self.sw_offset, self.sw_wrapmethod)
@@ -252,10 +253,9 @@ class FreezeVerts(bpy.types.Operator):
         activeObj = bpy.context.active_object
         wm = bpy.context.window_manager        
         
-        if bpy.context.active_object.vertex_groups.find("retopo_suppo_frozen") != -1:
+        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
-            #bpy.ops.object.vertex_group_remove(all=False)        
             if self.sw_addfreeze == True:
                 bpy.ops.object.vertex_group_assign()
                 bpy.ops.object.vertex_group_select()
@@ -282,7 +282,7 @@ class ThawFrozenVerts(bpy.types.Operator):
         activeObj = bpy.context.active_object
         wm = bpy.context.window_manager        
 
-        if bpy.context.active_object.vertex_groups.find("retopo_suppo_frozen") != -1:    
+        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:    
             tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = tv
             bpy.ops.object.vertex_group_remove(all=False)        
@@ -304,7 +304,8 @@ class ShowFrozenVerts(bpy.types.Operator):
         activeObj = bpy.context.active_object
         wm = bpy.context.window_manager        
         
-        if bpy.context.active_object.vertex_groups.find("retopo_suppo_frozen") != -1:
+        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
+            bpy.ops.mesh.select_mode(type='VERT')  
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
             bpy.ops.mesh.select_all(action='DESELECT')
