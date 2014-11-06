@@ -65,27 +65,26 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         md.vertex_group = "retopo_suppo_thawed"
     md.show_on_cage = True        
 
+    modnam = "shrinkwrap_apply"
+    modlist = bpy.context.object.modifiers
+    modops = bpy.ops.object.modifier_move_up
+    
     if wm.sw_autoapply == True:
     #move the sw mod up the stack
-        while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 0:
-            bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")    
+        for i in modlist:
+            if modlist.find(modnam) == 0: break
+            modops(modifier=modnam)    
     #apply the modifier
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="shrinkwrap_apply")
         bpy.ops.object.mode_set(mode='EDIT')
     else:
     #move the sw mod below the mirror mod assuming this is your first
-        if "Mirror" in bpy.data.objects[activeObj.name].modifiers:
-            if bpy.context.active_object.modifiers.find("Mirror") == 0:         
-                while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 1:
-                    bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")
-            else:
-                while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 0:
-                    bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")                                       
-        else:
-            while bpy.context.active_object.modifiers.find("shrinkwrap_apply") != 0:
-                bpy.ops.object.modifier_move_up(modifier= "shrinkwrap_apply")                          
-
+        for i in modlist:
+            if modlist.find(modnam) == 0: break
+            if modlist.find("Mirror") == 0:
+                if modlist.find(modnam) == 1: break
+            modops(modifier=modnam)    
     #clipcenter
     if clipcenter == "True":
         bpy.ops.mesh.select_mode(type='VERT')
