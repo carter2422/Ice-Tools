@@ -32,26 +32,24 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_mode(type='VERT')    
     
+    if "retopo_suppo_thawed" in bpy.context.active_object.vertex_groups:
+        tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_thawed"].index
+        activeObj.vertex_groups.active_index = tv
+        bpy.ops.object.vertex_group_remove(all=False)
+
+    if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
+        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
+
     if wm.sw_use_onlythawed == True:
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
             bpy.ops.mesh.select_all(action='DESELECT')
             bpy.ops.object.vertex_group_select()
-        
-        bpy.ops.mesh.select_all(action='INVERT')
-
-        if "retopo_suppo_thawed" in bpy.context.active_object.vertex_groups:
-            tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_thawed"].index
-            activeObj.vertex_groups.active_index = tv
-            bpy.ops.object.vertex_group_remove(all=False)            
-        
-        bpy.ops.object.vertex_group_add()
-        bpy.ops.object.vertex_group_assign()
-        bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
-
-    if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
-        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
+            bpy.ops.mesh.select_all(action='INVERT')
+            bpy.ops.object.vertex_group_add()
+            bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
+            bpy.ops.object.vertex_group_assign()
 
     md = activeObj.modifiers.new('shrinkwrap_apply', 'SHRINKWRAP')
     md.target = bpy.data.objects[meshlink]
@@ -296,9 +294,8 @@ class ThawFrozenVerts(bpy.types.Operator):
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:    
             tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = tv
-            bpy.ops.object.vertex_group_remove(all=False)        
             bpy.ops.object.vertex_group_remove_from()
-            
+
         return {'FINISHED'}  
 
 class ShowFrozenVerts(bpy.types.Operator):
