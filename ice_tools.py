@@ -244,15 +244,12 @@ class FreezeVerts(bpy.types.Operator):
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
-            bpy.ops.object.vertex_group_select()
             bpy.ops.object.vertex_group_assign()
         else:                                    
             bpy.ops.object.vertex_group_add()
             bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_frozen"
             bpy.ops.object.vertex_group_assign()
         
-        bpy.ops.mesh.select_all(action='DESELECT')            
-             
         return {'FINISHED'} 
 
 class ThawFrozenVerts(bpy.types.Operator):
