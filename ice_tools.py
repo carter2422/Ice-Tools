@@ -40,16 +40,14 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
         bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
 
-    if wm.sw_use_onlythawed == True:
-        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
-            fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
-            activeObj.vertex_groups.active_index = fv
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bpy.ops.object.vertex_group_select()
-            bpy.ops.mesh.select_all(action='INVERT')
-            bpy.ops.object.vertex_group_add()
-            bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
-            bpy.ops.object.vertex_group_assign()
+    if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
+        fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
+        activeObj.vertex_groups.active_index = fv
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.object.vertex_group_deselect()
+        bpy.ops.object.vertex_group_add()
+        bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
+        bpy.ops.object.vertex_group_assign()
 
     md = activeObj.modifiers.new('shrinkwrap_apply', 'SHRINKWRAP')
     md.target = bpy.data.objects[meshlink]
@@ -59,7 +57,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     if md.wrap_method == "NEAREST_SURFACEPOINT":
         md.use_keep_above_surface = True
     md.offset = wrap_offset
-    if wm.sw_use_onlythawed == True:                          
+    if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:                        
         md.vertex_group = "retopo_suppo_thawed"
     md.show_on_cage = True        
 
@@ -85,9 +83,6 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
             modops(modifier=modnam)    
     #clipcenter
     if clipcenter == "True":
-        bpy.ops.mesh.select_mode(type='VERT')
-        bpy.ops.mesh.select_all(action='DESELECT')
-        
         obj = bpy.context.active_object
         bm = bmesh.from_edit_mesh(obj.data)
         
@@ -167,7 +162,6 @@ class ShrinkUpdate(bpy.types.Operator):
     bl_label = "Shrinkwrap Update"
     bl_options = {'REGISTER', 'UNDO'}
     
-    use_only_thawed = bpy.props.BoolProperty(name = "Preserve Frozen", default = False)    
     apply_mod = bpy.props.BoolProperty(name = "Auto-apply Shrinkwrap", default = True)
     sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05) 
     sw_offset = bpy.props.FloatProperty(name = "Offset:", min = -0.1, max = 0.1, default = 0)
@@ -192,24 +186,11 @@ class ShrinkUpdate(bpy.types.Operator):
         
         wm.clipx_threshold = self.sw_clipx
         
-        if self.use_only_thawed == True:
-            wm.sw_use_onlythawed = True
-        
         if activeObj.mode == 'EDIT':
-            if "retopo_suppo_vgroup" in bpy.context.active_object.vertex_groups:
-                fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_vgroup"].index
-                activeObj.vertex_groups.active_index = fv
-                bpy.ops.object.vertex_group_remove(all=False)            
-
             bpy.ops.object.vertex_group_add()
-            bpy.ops.object.vertex_group_assign()
             bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_vgroup"
-            
-        if self.use_only_thawed == True:
-           wm.sw_use_onlythawed = True
-        else:
-           wm.sw_use_onlythawed = False
-           
+            bpy.ops.object.vertex_group_assign()            
+
         if self.apply_mod == True:
            wm.sw_autoapply = True
         else:
@@ -252,8 +233,6 @@ class FreezeVerts(bpy.types.Operator):
     bl_label = "Freeze Vertices"
     bl_options = {'REGISTER', 'UNDO'}    
 
-    sw_addfreeze = bpy.props.BoolProperty(name = "Add to current", default = True)
-
     @classmethod
     def poll(cls, context):
         return context.active_object is not None and context.active_object.mode == 'EDIT'
@@ -265,15 +244,14 @@ class FreezeVerts(bpy.types.Operator):
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
-            if self.sw_addfreeze == True:
-                bpy.ops.object.vertex_group_assign()
-                bpy.ops.object.vertex_group_select()
-            bpy.ops.object.vertex_group_remove(all=False)
-                                            
-        bpy.ops.object.vertex_group_add()
-        bpy.ops.object.vertex_group_assign()
+            bpy.ops.object.vertex_group_select()
+            bpy.ops.object.vertex_group_assign()
+        else:                                    
+            bpy.ops.object.vertex_group_add()
+            bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_frozen"
+            bpy.ops.object.vertex_group_assign()
+        
         bpy.ops.mesh.select_all(action='DESELECT')            
-        bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_frozen"
              
         return {'FINISHED'} 
 
@@ -503,6 +481,19 @@ class RetopoSupport(bpy.types.Panel):
         row2.operator("shrink.update", text="Shrinkwrap Update")          
         
         layout.separator()
+        box = layout.box().column(align=True)                      
+        if wm.expand_sw_freeze_verts == False: 
+            box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_RIGHT", icon_only=True, text="Frozen Verts", emboss=True)
+        else:
+            box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_DOWN", icon_only=True, text="Frozen Verts", emboss=True)
+            box.separator()
+            boxrow = box.row(align=True)
+            boxrow.operator("freeze_verts.retopo", text="Freeze Verts")
+            boxrow = box.row(align=True)
+            boxrow.operator("thaw_freeze_verts.retopo", text="Thaw Frozen Verts")
+            boxrow = box.row(align=True)
+            boxrow.operator("show_freeze_verts.retopo", text="Show Frozen Verts")        
+
         box = layout.box().column(align=True)
         if wm.expand_sw_freeze_mesh == False: 
             box.prop(wm, "expand_sw_freeze_mesh", icon="TRIA_RIGHT", icon_only=True, text="Frozen Mesh", emboss=True)
@@ -516,19 +507,6 @@ class RetopoSupport(bpy.types.Panel):
             boxrow = box.row(align=True)
             boxrow.operator("rem_icemesh.retopo", text="Remove Ice Property")                
             
-        box = layout.box().column(align=True)                      
-        if wm.expand_sw_freeze_verts == False: 
-            box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_RIGHT", icon_only=True, text="Frozen Verts", emboss=True)
-        else:
-            box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_DOWN", icon_only=True, text="Frozen Verts", emboss=True)
-            box.separator()
-            boxrow = box.row(align=True)
-            boxrow.operator("freeze_verts.retopo", text="Freeze Verts")
-            boxrow = box.row(align=True)
-            boxrow.operator("thaw_freeze_verts.retopo", text="Thaw Frozen Verts")
-            boxrow = box.row(align=True)
-            boxrow.operator("show_freeze_verts.retopo", text="Show Frozen Verts")                        
-
         box = layout.box().column(align=True)
         if wm.expand_sw_options == False: 
             box.prop(wm, "expand_sw_options", icon="TRIA_RIGHT", icon_only=True, text="Options", emboss=True)
