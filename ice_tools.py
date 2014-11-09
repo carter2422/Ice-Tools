@@ -297,7 +297,7 @@ class ShowFrozenVerts(bpy.types.Operator):
         return {'FINISHED'}
 
 class PolySculpt(bpy.types.Operator):
-    '''Polysculpt Retopology Mesh'''
+    '''Polysculpt retopology mesh'''
     bl_idname = "polysculpt.retopo"
     bl_label = "Sculpts Retopo Mesh"
     bl_options = {'REGISTER', 'UNDO'}
@@ -324,7 +324,7 @@ class PolySculpt(bpy.types.Operator):
         return {'FINISHED'}     
     
 class MeshViewToggle(bpy.types.Operator):
-    '''Turn on/off all view toggles for mesh'''
+    '''Turn on/off view toggles for mesh'''
     bl_idname = "meshview_toggle.retopo"
     bl_label = "Mesh View Toggle"
     bl_options = {'REGISTER', 'UNDO'}    
@@ -352,7 +352,7 @@ class MeshViewToggle(bpy.types.Operator):
         return {'FINISHED'}
     
 class GpencilSpacing(bpy.types.Operator):
-    '''Turn on/off all view toggles for mesh'''
+    '''Set Gpencil spacing'''
     bl_idname = "gpencil_spacing.retopo"
     bl_label = "Gpencil Spacing"
     bl_options = {'REGISTER', 'UNDO'}
@@ -403,7 +403,10 @@ class RetopoSupport(bpy.types.Panel):
         row_sw.operator("setup.retopo", "Set Up Retopo Mesh")
         row_sw = layout.row(align=True)
         row_sw.alignment = 'EXPAND'
-        row_sw.operator("shrink.update", "Shrinkwrap Update")          
+        row_sw.operator("shrink.update", "Shrinkwrap Update")
+        row_sw.operator("polysculpt.retopo", "", icon = "SCULPTMODE_HLT")
+        row_sw.operator("meshview_toggle.retopo", "", icon = "RESTRICT_VIEW_OFF")
+        row_sw.operator("gpencil_spacing.retopo", "", icon = "GREASEPENCIL")             
         
         box = layout.box().column(align=True)                      
         if wm.expand_sw_freeze_verts == False: 
@@ -412,17 +415,10 @@ class RetopoSupport(bpy.types.Panel):
             box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_DOWN", icon_only=True, text="Frozen Verts")
             box.separator()
             boxrow = box.row(align=True)
-            boxrow.operator("freeze_verts.retopo", "Freeze Verts")
-            boxrow = box.row(align=True)
-            boxrow.operator("thaw_freeze_verts.retopo", "Thaw Frozen Verts")
-            boxrow = box.row(align=True)
-            boxrow.operator("show_freeze_verts.retopo", "Show Frozen Verts")        
-
-        row_options = layout.row(align=True)
-        row_options.alignment = 'EXPAND'
-        row_options.operator("polysculpt.retopo", "Polysculpt")
-        row_options.operator("meshview_toggle.retopo", "View Toggles")
-        row_options.operator("gpencil_spacing.retopo", "Gpencil Spacing")
+            boxrow.alignment = 'EXPAND'
+            boxrow.operator("freeze_verts.retopo", "Freeze")
+            boxrow.operator("thaw_freeze_verts.retopo", "Thaw")
+            boxrow.operator("show_freeze_verts.retopo", "Show") 
 
 def register():
     bpy.utils.register_module(__name__)
