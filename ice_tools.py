@@ -164,7 +164,7 @@ class ShrinkUpdate(bpy.types.Operator):
     
     apply_mod = bpy.props.BoolProperty(name = "Auto-apply Shrinkwrap", default = True)
     sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05) 
-    sw_offset = bpy.props.FloatProperty(name = "Offset:", min = -0.1, max = 0.1, default = 0)
+    sw_offset = bpy.props.FloatProperty(name = "Offset:", min = -0.1, max = 0.1, step = 0.1, precision = 3, default = 0)
     sw_wrapmethod = bpy.props.EnumProperty(
         name = 'Wrap Method',
         items = (
@@ -172,8 +172,6 @@ class ShrinkUpdate(bpy.types.Operator):
             ('PROJECT', 'Project',""),
             ('NEAREST_SURFACEPOINT', 'Nearest Surface Point',"")),
         default = 'PROJECT')
-    sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.1, max = 0.1, step = 0.1, precision = 3, default = -0.05)        
-        
     
     @classmethod
     def poll(cls, context):
@@ -239,7 +237,6 @@ class FreezeVerts(bpy.types.Operator):
 
     def execute(self, context):
         activeObj = bpy.context.active_object
-        wm = bpy.context.window_manager        
         
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
@@ -264,7 +261,6 @@ class ThawFrozenVerts(bpy.types.Operator):
 
     def execute(self, context):
         activeObj = bpy.context.active_object
-        wm = bpy.context.window_manager        
 
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:    
             tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
@@ -285,8 +281,7 @@ class ShowFrozenVerts(bpy.types.Operator):
 
     def execute(self, context):
         activeObj = bpy.context.active_object
-        wm = bpy.context.window_manager        
-        
+
         if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
             bpy.ops.mesh.select_mode(type='VERT')  
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
@@ -339,7 +334,6 @@ class MeshViewToggle(bpy.types.Operator):
 
     def execute(self, context):
         activeObj = context.active_object
-        wm = context.window_manager        
         
         if self.view_showwire == True:
             bpy.context.space_data.show_only_render = False            
@@ -351,39 +345,6 @@ class MeshViewToggle(bpy.types.Operator):
         bpy.context.space_data.show_occlude_wire = self.view_hiddenwire
         return {'FINISHED'}
     
-class GpencilSpacing(bpy.types.Operator):
-    '''Set Gpencil spacing'''
-    bl_idname = "gpencil_spacing.retopo"
-    bl_label = "Gpencil Spacing"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    gpencil_spacing = bpy.props.FloatProperty(name = "Spacing",
-        description = "Gpencil spacing",
-        default = 10,
-        min = 0,
-        max = 100,
-        precision = 0,
-        subtype = 'PERCENTAGE')
-    gpencil_smooth = bpy.props.BoolProperty(name = "Smooth", default = False)
-    gpencil_simp_stroke = bpy.props.BoolProperty(name = "Simplify", default = False)                   
-
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is not None
-
-    def execute(self, context):
-        activeObj = context.active_object
-        wm = context.window_manager        
-        edit = context.user_preferences.edit
-
-        edit.grease_pencil_manhattan_distance = math.ceil(4*(.25*self.gpencil_spacing))
-        edit.grease_pencil_euclidean_distance = math.ceil(2*(.25*self.gpencil_spacing))
-        
-        edit.use_grease_pencil_smooth_stroke = self.gpencil_smooth
-        edit.use_grease_pencil_simplify_stroke = self.gpencil_simp_stroke        
-                           
-        return {'FINISHED'}
-
 class RetopoSupport(bpy.types.Panel):
     """Retopology Support Functions"""
     bl_label = "Ice Tools"
@@ -406,7 +367,6 @@ class RetopoSupport(bpy.types.Panel):
         row_sw.operator("shrink.update", "Shrinkwrap Update")
         row_sw.operator("polysculpt.retopo", "", icon = "SCULPTMODE_HLT")
         row_sw.operator("meshview_toggle.retopo", "", icon = "RESTRICT_VIEW_OFF")
-        row_sw.operator("gpencil_spacing.retopo", "", icon = "GREASEPENCIL")             
         
         box = layout.box().column(align=True)                      
         if wm.expand_sw_freeze_verts == False: 
