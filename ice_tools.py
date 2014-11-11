@@ -18,8 +18,11 @@ from bpy.props import *
 def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
     activeObj = bpy.context.active_object
     wm = bpy.context.window_manager 
-    oldMode = activeObj.mode
+    oldmod = activeObj.mode
     selmod = bpy.context.tool_settings.mesh_select_mode
+    modnam = "shrinkwrap_apply"
+    modlist = bpy.context.object.modifiers
+    modops = bpy.ops.object.modifier_move_up
         
     if selmod[0] == True: 
         oldSel = 'VERT'
@@ -49,7 +52,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
         bpy.ops.object.vertex_group_assign()
 
-    md = activeObj.modifiers.new('shrinkwrap_apply', 'SHRINKWRAP')
+    md = activeObj.modifiers.new(modnam, 'SHRINKWRAP')
     md.target = bpy.data.objects[meshlink]
     md.wrap_method = wrap_meth
     if md.wrap_method == "PROJECT":
@@ -61,10 +64,6 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         md.vertex_group = "retopo_suppo_thawed"
     md.show_on_cage = True        
 
-    modnam = "shrinkwrap_apply"
-    modlist = bpy.context.object.modifiers
-    modops = bpy.ops.object.modifier_move_up
-    
     if wm.sw_autoapply == True:
     #move the sw mod up the stack
         for i in modlist:
@@ -72,14 +71,15 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
             modops(modifier=modnam)    
     #apply the modifier
         bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.modifier_apply(apply_as='DATA', modifier="shrinkwrap_apply")
+        bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modnam)
         bpy.ops.object.mode_set(mode='EDIT')
     else:
-    #move the sw mod below the mirror mod assuming this is your first
+    #move the sw mod below the mirror or multires mod assuming this is your first
         for i in modlist:
             if modlist.find(modnam) == 0: break
-            if modlist.find("Mirror") == 0:
-                if modlist.find(modnam) == 1: break
+            if modlist.find(modnam) == 1:
+                if modlist.find("Mirror") == 0: break
+                if modlist.find("Multires") == 0: break
             modops(modifier=modnam)    
     #clipcenter
     if clipcenter == "True":
@@ -103,7 +103,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.ops.object.vertex_group_select()
         bpy.ops.object.vertex_group_remove(all=False)           
     
-    bpy.ops.object.mode_set(mode=oldMode)
+    bpy.ops.object.mode_set(mode=oldmod)
     
 class SetUpRetopoMesh(bpy.types.Operator):
     '''Set up Retopology Mesh on Active Object'''
@@ -180,7 +180,6 @@ class ShrinkUpdate(bpy.types.Operator):
     def execute(self, context):
         activeObj = context.active_object
         wm = context.window_manager        
-        oldMode = activeObj.mode
         
         wm.clipx_threshold = self.sw_clipx
         
