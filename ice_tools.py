@@ -217,7 +217,7 @@ class ShrinkUpdate(bpy.types.Operator):
                wm.sw_autoapply = False
 
             if activeObj.mode == 'SCULPT':
-                viewtoggle(True, True, self.view_hidden)
+                viewtoggle(True, self.view_xray, self.view_hidden)
             else:
                 viewtoggle(self.view_wire, self.view_xray, self.view_hidden)
             
@@ -314,7 +314,7 @@ class PolySculpt(bpy.types.Operator):
         if wm.sw_mesh != activeObj.name:
             self.report({'WARNING'}, "Establish Link First!")
         else:
-            viewtoggle(True, True, False)
+            viewtoggle(True, False, False)
             bpy.ops.object.mode_set(mode='SCULPT')
 
         return {'FINISHED'}     
