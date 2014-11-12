@@ -15,7 +15,7 @@ import math
 import bmesh
 from bpy.props import *
 
-def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
+def sw_Update(meshlink, wrap_offset, wrap_meth):
     activeObj = bpy.context.active_object
     wm = bpy.context.window_manager 
     oldmod = activeObj.mode
@@ -82,7 +82,7 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
                 if modlist.find("Multires") == 0: break
             modops(modifier=modnam)    
     #clipcenter
-    if clipcenter == "True":
+    if "Mirror" in bpy.data.objects[activeObj.name].modifiers: 
         obj = bpy.context.active_object
         bm = bmesh.from_edit_mesh(obj.data)
         
@@ -104,6 +104,18 @@ def sw_Update(meshlink, clipcenter, wrap_offset, wrap_meth):
         bpy.ops.object.vertex_group_remove(all=False)           
     
     bpy.ops.object.mode_set(mode=oldmod)
+
+def viewtoggle(showwire, xray, hiddenwire):
+    activeObj = bpy.context.active_object
+    
+    if showwire == True:
+        bpy.context.space_data.show_only_render = False            
+        bpy.data.objects[activeObj.name].show_all_edges = True
+    else:
+        bpy.data.objects[activeObj.name].show_all_edges = False            
+    bpy.data.objects[activeObj.name].show_wire = showwire
+    bpy.context.object.show_x_ray = xray
+    bpy.context.space_data.show_occlude_wire = hiddenwire
     
 class SetUpRetopoMesh(bpy.types.Operator):
     '''Set up Retopology Mesh on Active Object'''
@@ -172,6 +184,9 @@ class ShrinkUpdate(bpy.types.Operator):
             ('PROJECT', 'Project',""),
             ('NEAREST_SURFACEPOINT', 'Nearest Surface Point',"")),
         default = 'PROJECT')
+    view_wire = bpy.props.BoolProperty(name = "Solid wire", default = False)
+    view_xray = bpy.props.BoolProperty(name = "X-ray", default = False)
+    view_hidden = bpy.props.BoolProperty(name = "Hidden wire", default = False)
     
     @classmethod
     def poll(cls, context):
@@ -180,47 +195,39 @@ class ShrinkUpdate(bpy.types.Operator):
     def execute(self, context):
         activeObj = context.active_object
         wm = context.window_manager        
-        
         wm.clipx_threshold = self.sw_clipx
         
-        if activeObj.mode == 'EDIT':
-            bpy.ops.object.vertex_group_add()
-            bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_vgroup"
-            bpy.ops.object.vertex_group_assign()            
-
-        if self.apply_mod == True:
-           wm.sw_autoapply = True
-        else:
-           wm.sw_autoapply = False
-                            
+        #establish link
         if len(bpy.context.selected_objects) == 2:
             for SelectedObject in bpy.context.selected_objects:
                 if SelectedObject != activeObj:
                     wm.sw_target = SelectedObject.name
                 else:
                     wm.sw_mesh = activeObj.name
-            if wm.sw_mesh != None and wm.sw_target != None:
-                if not "Mirror" in bpy.data.objects[activeObj.name].modifiers:             
-                    sw_Update(wm.sw_target, "False", self.sw_offset, self.sw_wrapmethod)
-                else:
-                    sw_Update(wm.sw_target, "True", self.sw_offset, self.sw_wrapmethod)
+                if SelectedObject != activeObj :
+                    SelectedObject.select = False                    
+        
+        if wm.sw_mesh != activeObj.name:
+            self.report({'WARNING'}, "Establish Link First!")
+            return {'FINISHED'}
         else:
-            if wm.sw_mesh=="" or wm.sw_target=="":
-                self.report({'WARNING'}, "Establish Link First!")
-                return {'FINISHED'}
-            if wm.sw_mesh != activeObj.name:
-                self.report({'WARNING'}, "Not Active Link Mesh!")
-                return {'FINISHED'}
+            if self.apply_mod == True:
+               wm.sw_autoapply = True
             else:
-                if not "Mirror" in bpy.data.objects[activeObj.name].modifiers:             
-                    sw_Update(wm.sw_target, "False", self.sw_offset, self.sw_wrapmethod)
-                else:
-                    sw_Update(wm.sw_target, "True", self.sw_offset, self.sw_wrapmethod)
+               wm.sw_autoapply = False
 
-        for SelectedObject in bpy.context.selected_objects :
-            if SelectedObject != activeObj :
-                SelectedObject.select = False
-        activeObj.select = True
+            if activeObj.mode == 'SCULPT':
+                viewtoggle(True, True, self.view_hidden)
+            else:
+                viewtoggle(self.view_wire, self.view_xray, self.view_hidden)
+            
+            if activeObj.mode == 'EDIT':
+                bpy.ops.object.vertex_group_add()
+                bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_vgroup"
+                bpy.ops.object.vertex_group_assign()            
+
+            sw_Update(wm.sw_target, self.sw_offset, self.sw_wrapmethod)
+            activeObj.select = True
     
         return {'FINISHED'}
 
@@ -302,47 +309,15 @@ class PolySculpt(bpy.types.Operator):
     
     def execute(self, context):
         activeObj = context.active_object        
-        wm = context.window_manager 
+        wm = context.window_manager
         
-        if wm.sw_mesh=="":
-            self.report({'WARNING'}, "Establish Link First!")
-            return {'FINISHED'}
         if wm.sw_mesh != activeObj.name:
-            self.report({'WARNING'}, "Not Active Retopo Mesh!")
+            self.report({'WARNING'}, "Establish Link First!")
         else:
-            bpy.context.object.show_all_edges = True
-            bpy.context.object.show_wire = True
+            viewtoggle(True, True, False)
             bpy.ops.object.mode_set(mode='SCULPT')
-            bpy.context.space_data.show_only_render = False
 
         return {'FINISHED'}     
-    
-class MeshViewToggle(bpy.types.Operator):
-    '''Turn on/off view toggles for mesh'''
-    bl_idname = "meshview_toggle.retopo"
-    bl_label = "Mesh View Toggle"
-    bl_options = {'REGISTER', 'UNDO'}    
-
-    view_showwire = bpy.props.BoolProperty(name = "Show Wire", default = False)
-    view_xray = bpy.props.BoolProperty(name = "X-Ray", default = False)
-    view_hiddenwire = bpy.props.BoolProperty(name = "Hidden Wire", default = False)
-    
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is not None
-
-    def execute(self, context):
-        activeObj = context.active_object
-        
-        if self.view_showwire == True:
-            bpy.context.space_data.show_only_render = False            
-            bpy.data.objects[activeObj.name].show_all_edges = True
-        else:
-            bpy.data.objects[activeObj.name].show_all_edges = False            
-        bpy.data.objects[activeObj.name].show_wire = self.view_showwire
-        bpy.context.object.show_x_ray = self.view_xray
-        bpy.context.space_data.show_occlude_wire = self.view_hiddenwire
-        return {'FINISHED'}
     
 class RetopoSupport(bpy.types.Panel):
     """Retopology Support Functions"""
@@ -365,19 +340,12 @@ class RetopoSupport(bpy.types.Panel):
         row_sw.alignment = 'EXPAND'
         row_sw.operator("shrink.update", "Shrinkwrap Update")
         row_sw.operator("polysculpt.retopo", "", icon = "SCULPTMODE_HLT")
-        row_sw.operator("meshview_toggle.retopo", "", icon = "RESTRICT_VIEW_OFF")
         
-        box = layout.box().column(align=True)                      
-        if wm.expand_sw_freeze_verts == False: 
-            box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_RIGHT", icon_only=True, text="Frozen Verts")
-        else:
-            box.prop(wm, "expand_sw_freeze_verts", icon="TRIA_DOWN", icon_only=True, text="Frozen Verts")
-            box.separator()
-            boxrow = box.row(align=True)
-            boxrow.alignment = 'EXPAND'
-            boxrow.operator("freeze_verts.retopo", "Freeze")
-            boxrow.operator("thaw_freeze_verts.retopo", "Thaw")
-            boxrow.operator("show_freeze_verts.retopo", "Show") 
+        row_fv = layout.row(align=True)
+        row_fv.alignment = 'EXPAND'
+        row_fv.operator("freeze_verts.retopo", "Freeze")
+        row_fv.operator("thaw_freeze_verts.retopo", "Thaw")
+        row_fv.operator("show_freeze_verts.retopo", "Show") 
 
 def register():
     bpy.utils.register_module(__name__)
@@ -386,7 +354,6 @@ def register():
     bpy.types.WindowManager.sw_target= StringProperty()
     bpy.types.WindowManager.sw_use_onlythawed = BoolProperty(default=False)      
     bpy.types.WindowManager.sw_autoapply = BoolProperty(default=True)          
-    bpy.types.WindowManager.expand_sw_freeze_verts = BoolProperty(default=False) 
     bpy.types.WindowManager.clipx_threshold = FloatProperty(min = -0.1, max = 0.1, step = 0.1, precision = 3, default = -0.05)
   
 def unregister():
