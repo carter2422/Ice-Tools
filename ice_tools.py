@@ -105,18 +105,6 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
     
     bpy.ops.object.mode_set(mode=oldmod)
 
-def viewtoggle(showwire, xray, hiddenwire):
-    activeObj = bpy.context.active_object
-    
-    if showwire == True:
-        bpy.context.space_data.show_only_render = False            
-        bpy.data.objects[activeObj.name].show_all_edges = True
-    else:
-        bpy.data.objects[activeObj.name].show_all_edges = False            
-    bpy.data.objects[activeObj.name].show_wire = showwire
-    bpy.context.object.show_x_ray = xray
-    bpy.context.space_data.show_occlude_wire = hiddenwire
-    
 class SetUpRetopoMesh(bpy.types.Operator):
     '''Set up Retopology Mesh on Active Object'''
     bl_idname = "setup.retopo"
@@ -136,7 +124,7 @@ class SetUpRetopoMesh(bpy.types.Operator):
         
         bpy.ops.mesh.delete(type='VERT')
         bpy.ops.object.editmode_toggle()
-        bpy.context.object.name = oldObj + "_retopo_mesh"    
+        context.object.name = oldObj + "_retopo_mesh"    
         activeObj = context.active_object
 
         #place mirror mod
@@ -148,21 +136,23 @@ class SetUpRetopoMesh(bpy.types.Operator):
         bpy.ops.gpencil.data_add()
         bpy.ops.gpencil.layer_add()
         context.active_object.grease_pencil.draw_mode = 'SURFACE'
-        bpy.context.active_object.grease_pencil.layers.active.line_width = 1
+        context.active_object.grease_pencil.layers.active.line_width = 1
         bpy.data.objects[oldObj].select = True        
     
+        #further mesh toggles
         bpy.ops.object.editmode_toggle()
-        bpy.context.scene.tool_settings.use_snap = True
-        bpy.context.scene.tool_settings.snap_element = 'FACE'
-        bpy.context.scene.tool_settings.snap_target = 'CLOSEST'
-        bpy.context.scene.tool_settings.use_snap_project = True
+        context.scene.tool_settings.use_snap = True
+        context.scene.tool_settings.snap_element = 'FACE'
+        context.scene.tool_settings.snap_target = 'CLOSEST'
+        context.scene.tool_settings.use_snap_project = True
+        context.object.show_all_edges = True 
         bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='VERT')
 
         #establish link for shrinkwrap update function
         wm.sw_target = oldObj
         wm.sw_mesh = activeObj.name
         
-        for SelectedObject in bpy.context.selected_objects :
+        for SelectedObject in context.selected_objects :
             if SelectedObject != activeObj :
                 SelectedObject.select = False
         activeObj.select = True
@@ -184,9 +174,6 @@ class ShrinkUpdate(bpy.types.Operator):
             ('PROJECT', 'Project',""),
             ('NEAREST_SURFACEPOINT', 'Nearest Surface Point',"")),
         default = 'PROJECT')
-    view_wire = bpy.props.BoolProperty(name = "Solid wire", default = False)
-    view_xray = bpy.props.BoolProperty(name = "X-ray", default = False)
-    view_hidden = bpy.props.BoolProperty(name = "Hidden wire", default = False)
     
     @classmethod
     def poll(cls, context):
@@ -216,11 +203,6 @@ class ShrinkUpdate(bpy.types.Operator):
             else:
                wm.sw_autoapply = False
 
-            if activeObj.mode == 'SCULPT':
-                viewtoggle(True, self.view_xray, self.view_hidden)
-            else:
-                viewtoggle(self.view_wire, self.view_xray, self.view_hidden)
-            
             if activeObj.mode == 'EDIT':
                 bpy.ops.object.vertex_group_add()
                 bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_vgroup"
@@ -314,7 +296,8 @@ class PolySculpt(bpy.types.Operator):
         if wm.sw_mesh != activeObj.name:
             self.report({'WARNING'}, "Establish Link First!")
         else:
-            viewtoggle(True, False, False)
+            context.space_data.show_only_render = False            
+            context.object.show_wire = True            
             bpy.ops.object.mode_set(mode='SCULPT')
 
         return {'FINISHED'}     
@@ -329,10 +312,8 @@ class RetopoSupport(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        edit = context.user_preferences.edit
-        
         wm = context.window_manager
-        
+
         row_sw = layout.row(align=True)
         row_sw.alignment = 'EXPAND'
         row_sw.operator("setup.retopo", "Set Up Retopo Mesh")
@@ -346,6 +327,13 @@ class RetopoSupport(bpy.types.Panel):
         row_fv.operator("freeze_verts.retopo", "Freeze")
         row_fv.operator("thaw_freeze_verts.retopo", "Thaw")
         row_fv.operator("show_freeze_verts.retopo", "Show") 
+        
+        if context.active_object is not None:
+            row_view = layout.row(align=True)
+            row_sw.alignment = 'EXPAND'
+            row_view.prop(context.object, "show_wire", toggle =False)
+            row_view.prop(context.object, "show_x_ray", toggle =False)
+            row_view.prop(context.space_data, "show_occlude_wire", toggle =False)              
 
 def register():
     bpy.utils.register_module(__name__)
