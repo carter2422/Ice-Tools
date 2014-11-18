@@ -165,7 +165,6 @@ class ShrinkUpdate(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     apply_mod = bpy.props.BoolProperty(name = "Auto-apply Shrinkwrap", default = True)
-    sw_clipx = bpy.props.FloatProperty(name = "Clip X Threshold", min = -0.05, max = 0.05, step = 0.1, precision = 3, default = -0.05) 
     sw_offset = bpy.props.FloatProperty(name = "Offset:", min = -0.1, max = 0.1, step = 0.1, precision = 3, default = 0)
     sw_wrapmethod = bpy.props.EnumProperty(
         name = 'Wrap Method',
@@ -182,7 +181,6 @@ class ShrinkUpdate(bpy.types.Operator):
     def execute(self, context):
         activeObj = context.active_object
         wm = context.window_manager        
-        wm.clipx_threshold = self.sw_clipx
         
         #establish link
         if len(bpy.context.selected_objects) == 2:
@@ -321,6 +319,8 @@ class RetopoSupport(bpy.types.Panel):
         row_sw.alignment = 'EXPAND'
         row_sw.operator("shrink.update", "Shrinkwrap Update")
         row_sw.operator("polysculpt.retopo", "", icon = "SCULPTMODE_HLT")
+        row_sw = layout.row(align=True)
+        row_sw.prop(wm, "clipx_threshold", "Clip X Threshold")
         
         row_fv = layout.row(align=True)
         row_fv.alignment = 'EXPAND'
@@ -342,7 +342,7 @@ def register():
     bpy.types.WindowManager.sw_target= StringProperty()
     bpy.types.WindowManager.sw_use_onlythawed = BoolProperty(default=False)      
     bpy.types.WindowManager.sw_autoapply = BoolProperty(default=True)          
-    bpy.types.WindowManager.clipx_threshold = FloatProperty(min = -0.1, max = 0.1, step = 0.1, precision = 3, default = -0.05)
+    bpy.types.WindowManager.clipx_threshold = FloatProperty(min = -0.1, max = 0.1, step = 0.1, precision = 3, default = 0)
   
 def unregister():
     bpy.utils.unregister_module(__name__)
