@@ -15,6 +15,20 @@ import math
 import bmesh
 from bpy.props import *
 
+def add_mod(mod, link, meth, offset):
+    md = bpy.context.active_object.modifiers.new(mod, 'SHRINKWRAP')
+    md.target = bpy.data.objects[link]
+    md.wrap_method = meth
+    if md.wrap_method == "PROJECT":
+        md.use_negative_direction = True
+    if md.wrap_method == "NEAREST_SURFACEPOINT":
+        md.use_keep_above_surface = True
+    md.offset = offset
+    if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:                        
+        md.vertex_group = "retopo_suppo_thawed"
+    md.show_on_cage = True        
+
+
 def sw_Update(meshlink, wrap_offset, wrap_meth):
     activeObj = bpy.context.active_object
     wm = bpy.context.window_manager 
@@ -35,13 +49,13 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_mode(type='VERT')    
     
+    if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
+        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
+
     if "retopo_suppo_thawed" in bpy.context.active_object.vertex_groups:
         tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_thawed"].index
         activeObj.vertex_groups.active_index = tv
         bpy.ops.object.vertex_group_remove(all=False)
-
-    if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
-        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
 
     if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
         fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
@@ -52,35 +66,29 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
         bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
         bpy.ops.object.vertex_group_assign()
 
-    md = activeObj.modifiers.new(modnam, 'SHRINKWRAP')
-    md.target = bpy.data.objects[meshlink]
-    md.wrap_method = wrap_meth
-    if md.wrap_method == "PROJECT":
-        md.use_negative_direction = True
-    if md.wrap_method == "NEAREST_SURFACEPOINT":
-        md.use_keep_above_surface = True
-    md.offset = wrap_offset
-    if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:                        
-        md.vertex_group = "retopo_suppo_thawed"
-    md.show_on_cage = True        
+    #add sw mod
+    add_mod(modnam, meshlink, wrap_meth, wrap_offset)        
 
-    if wm.sw_autoapply == True:
-    #move the sw mod up the stack
-        for i in modlist:
-            if modlist.find(modnam) == 0: break
-            modops(modifier=modnam)    
-    #apply the modifier
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modnam)
-        bpy.ops.object.mode_set(mode='EDIT')
-    else:
+    #move sw mod up the stack
+    for i in modlist:
+        if modlist.find(modnam) == 0: break
+        modops(modifier=modnam)
+            
+    #apply modifier
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modnam)
+    bpy.ops.object.mode_set(mode='EDIT')
+    
+    if wm.sw_autoapply == False:
     #move the sw mod below the mirror or multires mod assuming this is your first
+        add_mod(modnam, meshlink, wrap_meth, wrap_offset)   
         for i in modlist:
             if modlist.find(modnam) == 0: break
             if modlist.find(modnam) == 1:
                 if modlist.find("Mirror") == 0: break
                 if modlist.find("Multires") == 0: break
-            modops(modifier=modnam)    
+            modops(modifier=modnam)
+                
     #clipcenter
     if "Mirror" in bpy.data.objects[activeObj.name].modifiers: 
         obj = bpy.context.active_object
