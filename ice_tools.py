@@ -13,10 +13,11 @@ bl_info = {
 import bpy
 import math
 import bmesh
+from bpy import ops, context
 from bpy.props import *
 
 def add_mod(mod, link, meth, offset):
-    md = bpy.context.active_object.modifiers.new(mod, 'SHRINKWRAP')
+    md = context.active_object.modifiers.new(mod, 'SHRINKWRAP')
     md.target = bpy.data.objects[link]
     md.wrap_method = meth
     if md.wrap_method == "PROJECT":
@@ -24,19 +25,19 @@ def add_mod(mod, link, meth, offset):
     if md.wrap_method == "NEAREST_SURFACEPOINT":
         md.use_keep_above_surface = True
     md.offset = offset
-    if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:                        
+    if "retopo_suppo_frozen" in context.active_object.vertex_groups:                        
         md.vertex_group = "retopo_suppo_thawed"
     md.show_on_cage = True        
 
 
 def sw_Update(meshlink, wrap_offset, wrap_meth):
-    activeObj = bpy.context.active_object
-    wm = bpy.context.window_manager 
+    activeObj = context.active_object
+    wm = context.window_manager 
     oldmod = activeObj.mode
-    selmod = bpy.context.tool_settings.mesh_select_mode
+    selmod = context.tool_settings.mesh_select_mode
     modnam = "shrinkwrap_apply"
-    modlist = bpy.context.object.modifiers
-    modops = bpy.ops.object.modifier_move_up
+    modlist = context.object.modifiers
+    modops = ops.object.modifier_move_up
         
     if selmod[0] == True: 
         oldSel = 'VERT'
@@ -45,26 +46,26 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
     if selmod[2] == True: 
         oldSel = 'FACE'
     
-    bpy.context.scene.objects.active = activeObj
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_mode(type='VERT')    
+    context.scene.objects.active = activeObj
+    ops.object.mode_set(mode='EDIT')
+    ops.mesh.select_mode(type='VERT')    
     
-    if "shrinkwrap_apply" in bpy.context.active_object.modifiers:
-        bpy.ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
+    if "shrinkwrap_apply" in context.active_object.modifiers:
+        ops.object.modifier_remove(modifier= "shrinkwrap_apply") 
 
-    if "retopo_suppo_thawed" in bpy.context.active_object.vertex_groups:
+    if "retopo_suppo_thawed" in context.active_object.vertex_groups:
         tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_thawed"].index
         activeObj.vertex_groups.active_index = tv
-        bpy.ops.object.vertex_group_remove(all=False)
+        ops.object.vertex_group_remove(all=False)
 
-    if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
+    if "retopo_suppo_frozen" in context.active_object.vertex_groups:
         fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
         activeObj.vertex_groups.active_index = fv
-        bpy.ops.mesh.select_all(action="SELECT")
-        bpy.ops.object.vertex_group_deselect()
-        bpy.ops.object.vertex_group_add()
+        ops.mesh.select_all(action="SELECT")
+        ops.object.vertex_group_deselect()
+        ops.object.vertex_group_add()
         bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_thawed"
-        bpy.ops.object.vertex_group_assign()
+        ops.object.vertex_group_assign()
 
     #add sw mod
     add_mod(modnam, meshlink, wrap_meth, wrap_offset)        
@@ -75,9 +76,9 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
         modops(modifier=modnam)
             
     #apply modifier
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modnam)
-    bpy.ops.object.mode_set(mode='EDIT')
+    ops.object.mode_set(mode='OBJECT')
+    ops.object.modifier_apply(apply_as='DATA', modifier=modnam)
+    ops.object.mode_set(mode='EDIT')
     
     if wm.sw_autoapply == False:
     #move the sw mod below the mirror or multires mod assuming this is your first
@@ -91,7 +92,7 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
                 
     #clipcenter
     if "Mirror" in bpy.data.objects[activeObj.name].modifiers: 
-        obj = bpy.context.active_object
+        obj = context.active_object
         bm = bmesh.from_edit_mesh(obj.data)
         
         for v in bm.verts:
@@ -102,16 +103,16 @@ def sw_Update(meshlink, wrap_offset, wrap_meth):
                 if v.co.x <= wm.clipx_threshold:
                     v.co.x = 0
 
-    bpy.ops.mesh.select_all(action='DESELECT')
-    bpy.ops.mesh.select_mode(type=oldSel)
+    ops.mesh.select_all(action='DESELECT')
+    ops.mesh.select_mode(type=oldSel)
     
-    if "retopo_suppo_vgroup" in bpy.context.active_object.vertex_groups:
+    if "retopo_suppo_vgroup" in context.active_object.vertex_groups:
         vg = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_vgroup"].index
         activeObj.vertex_groups.active_index = vg            
-        bpy.ops.object.vertex_group_select()
-        bpy.ops.object.vertex_group_remove(all=False)           
+        ops.object.vertex_group_select()
+        ops.object.vertex_group_remove(all=False)           
     
-    bpy.ops.object.mode_set(mode=oldmod)
+    ops.object.mode_set(mode=oldmod)
 
 class SetUpRetopoMesh(bpy.types.Operator):
     '''Set up Retopology Mesh on Active Object'''
@@ -127,11 +128,11 @@ class SetUpRetopoMesh(bpy.types.Operator):
         wm = context.window_manager 
         oldObj = context.active_object.name
 
-        bpy.ops.view3d.snap_cursor_to_active()
-        bpy.ops.mesh.primitive_plane_add(enter_editmode = True)
+        ops.view3d.snap_cursor_to_active()
+        ops.mesh.primitive_plane_add(enter_editmode = True)
         
-        bpy.ops.mesh.delete(type='VERT')
-        bpy.ops.object.editmode_toggle()
+        ops.mesh.delete(type='VERT')
+        ops.object.editmode_toggle()
         context.object.name = oldObj + "_retopo_mesh"    
         activeObj = context.active_object
 
@@ -141,20 +142,20 @@ class SetUpRetopoMesh(bpy.types.Operator):
         md.use_clip = True
         
         #generate grease pencil surface draw mode on retopo mesh
-        bpy.ops.gpencil.data_add()
-        bpy.ops.gpencil.layer_add()
+        ops.gpencil.data_add()
+        ops.gpencil.layer_add()
         context.active_object.grease_pencil.draw_mode = 'SURFACE'
         context.active_object.grease_pencil.layers.active.line_width = 1
         bpy.data.objects[oldObj].select = True        
     
         #further mesh toggles
-        bpy.ops.object.editmode_toggle()
+        ops.object.editmode_toggle()
         context.scene.tool_settings.use_snap = True
         context.scene.tool_settings.snap_element = 'FACE'
         context.scene.tool_settings.snap_target = 'CLOSEST'
         context.scene.tool_settings.use_snap_project = True
         context.object.show_all_edges = True 
-        bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='VERT')
+        ops.mesh.select_mode(use_extend=False, use_expand=False, type='VERT')
 
         #establish link for shrinkwrap update function
         wm.sw_target = oldObj
@@ -191,8 +192,8 @@ class ShrinkUpdate(bpy.types.Operator):
         wm = context.window_manager        
         
         #establish link
-        if len(bpy.context.selected_objects) == 2:
-            for SelectedObject in bpy.context.selected_objects:
+        if len(context.selected_objects) == 2:
+            for SelectedObject in context.selected_objects:
                 if SelectedObject != activeObj:
                     wm.sw_target = SelectedObject.name
                 else:
@@ -210,9 +211,9 @@ class ShrinkUpdate(bpy.types.Operator):
                wm.sw_autoapply = False
 
             if activeObj.mode == 'EDIT':
-                bpy.ops.object.vertex_group_add()
+                ops.object.vertex_group_add()
                 bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_vgroup"
-                bpy.ops.object.vertex_group_assign()            
+                ops.object.vertex_group_assign()            
 
             sw_Update(wm.sw_target, self.sw_offset, self.sw_wrapmethod)
             activeObj.select = True
@@ -230,16 +231,16 @@ class FreezeVerts(bpy.types.Operator):
         return context.active_object is not None and context.active_object.mode == 'EDIT'
 
     def execute(self, context):
-        activeObj = bpy.context.active_object
+        activeObj = context.active_object
         
-        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
+        if "retopo_suppo_frozen" in context.active_object.vertex_groups:
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
-            bpy.ops.object.vertex_group_assign()
+            ops.object.vertex_group_assign()
         else:                                    
-            bpy.ops.object.vertex_group_add()
+            ops.object.vertex_group_add()
             bpy.data.objects[activeObj.name].vertex_groups.active.name = "retopo_suppo_frozen"
-            bpy.ops.object.vertex_group_assign()
+            ops.object.vertex_group_assign()
         
         return {'FINISHED'} 
 
@@ -254,12 +255,12 @@ class ThawFrozenVerts(bpy.types.Operator):
         return context.active_object is not None and context.active_object.mode == 'EDIT'
 
     def execute(self, context):
-        activeObj = bpy.context.active_object
+        activeObj = context.active_object
 
-        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:    
+        if "retopo_suppo_frozen" in context.active_object.vertex_groups:    
             tv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = tv
-            bpy.ops.object.vertex_group_remove_from()
+            ops.object.vertex_group_remove_from()
 
         return {'FINISHED'}  
 
@@ -274,14 +275,14 @@ class ShowFrozenVerts(bpy.types.Operator):
         return context.active_object is not None and context.active_object.mode == 'EDIT'
 
     def execute(self, context):
-        activeObj = bpy.context.active_object
+        activeObj = context.active_object
 
-        if "retopo_suppo_frozen" in bpy.context.active_object.vertex_groups:
-            bpy.ops.mesh.select_mode(type='VERT')  
+        if "retopo_suppo_frozen" in context.active_object.vertex_groups:
+            ops.mesh.select_mode(type='VERT')  
             fv = bpy.data.objects[activeObj.name].vertex_groups["retopo_suppo_frozen"].index
             activeObj.vertex_groups.active_index = fv
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bpy.ops.object.vertex_group_select()
+            ops.mesh.select_all(action='DESELECT')
+            ops.object.vertex_group_select()
                    
         return {'FINISHED'}
 
@@ -304,7 +305,7 @@ class PolySculpt(bpy.types.Operator):
         else:
             context.space_data.show_only_render = False            
             context.object.show_wire = True            
-            bpy.ops.object.mode_set(mode='SCULPT')
+            ops.object.mode_set(mode='SCULPT')
 
         return {'FINISHED'}     
     
@@ -357,18 +358,3 @@ def unregister():
     
 if __name__ == "__main__":
     register()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
